@@ -1,0 +1,23 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "TriggerboxOnObject",
+	"Description": "Put the trigger box in the center of the object",
+	"Category": "Tools",
+	"CreatedBy": "Noirkun",
+	"CreatedByURL": "https://twitter.com/Noirkun00000001",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"EngineVersion": "5.1.0",
+	"CanContainContent": false,
+	"Installed": true,
+	"Modules": [
+		{
+			"Name": "TriggerboxOnObject",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	]
+}
