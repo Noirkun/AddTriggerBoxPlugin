@@ -1,16 +1,15 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "EditorClickedEvent.h"
+#include "Engine/TriggerBox.h"
 #include "Selection.h"
 
 
-// Sets default values
 AEditorClickedEvent::AEditorClickedEvent()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	
 	PrimaryActorTick . bCanEverTick = true;
 
 #if WITH_EDITORONLY_DATA
+	//エディターで選択したオブジェクトをUSelection::SelectObjectEventに登録
 	USelection::SelectObjectEvent . AddUObject(this, &AEditorClickedEvent::OnObjectSelected);
 #endif
 }
@@ -20,55 +19,59 @@ void AEditorClickedEvent::OnObjectSelected(UObject* Object)
 {
 	if (VerticalBox.IsValid())
 	{
-		//トリガーボックス追加のボタン
+		//トリガーボックスを作成するボタン
 		VerticalBox -> ClearChildren();
 		VerticalBox -> AddSlot()
 		.AutoHeight()
 		[
 			SNew(SButton)
-						. Text(FText::FromString("Create TriggerBox"))
-						. OnClicked_Lambda([this]()
-			             {
-				             if (AddButtonClicked.IsBound())
-				             {
-					             AddButtonClicked.Execute();
-				             }
-				             return FReply::Handled();
-			             })
-
+			. Text(FText::FromString("Create TriggerBox"))
+			// ボタンがクリックされたときの処理をラムダ式で定義
+			. OnClicked_Lambda([this]()
+			{
+				//デリゲートがバインドされていたら実行
+				if (AddButtonClicked.IsBound())
+				{
+					AddButtonClicked.Execute();
+				}
+				return FReply::Handled();
+			})
 		];
 	}
 
-	if(!SetActorName.IsEmpty())	//オブジェクトが選択された際に一度中身を空にする
+	//オブジェクトが選択された際に一度中身を空にする
+	if(!SetActorName.IsEmpty())
 	{
 		SetActorName.Empty();
-		CustomEditableTextBox.Empty();
 	}
 	
 	SelectActors.Empty();
-	//UE_LOG(LogTemp, Log, TEXT("%s::OnObjectSelected(): %s was %s."), *GetName(), *Object->GetName(),
-		// *FString(Object->IsSelected() ? "selected" : "de-selected"));
 	
 	//SelectedObjectにエディターで選択したUObjectを格納
 	GEditor -> GetSelectedActors() -> GetSelectedObjects(AActor::StaticClass(), SelectedObjects);
-	SelectActorsNum = SelectedObjects.Num();	//選択してるUObjectの数
+	SelectActorsNum = SelectedObjects.Num();
 
+	// 選択したオブジェクトのウィジェットを作成
+	CreateSelectObjectsWidget();
+
+	// 生成ボタンがクリックされたときの処理
+	CreateButtonClicked();
+
+}
+
+void AEditorClickedEvent::CreateSelectObjectsWidget()
+{
 	for (int32 i = 0; i < SelectedObjects.Num(); ++i)
 	{
-		//UE_LOG(LogTemp, Log, TEXT("SelectActorsNum:%d,SelectedObjects.Num():%d"), SelectActorsNum,SelectedObjects.Num());
-
+		// 選択したオブジェクトの情報を格納
 		AActor* SelectObject = Cast<AActor, UObject>(SelectedObjects[i]);
 		SelectObjectStruct SelectActor = {FText::FromString(*SelectObject -> GetActorLabel()), SelectObject};
 		SelectActors.Emplace(SelectActor);
-		//UE_LOG(LogTemp, Log, TEXT("アクターの名前:%s,配列のサイズ:%d"), *SelectObject->GetActorLabel(), i);
-
 		SetActorName.SetNum(SelectedObjects.Num());
-		//UE_LOG(LogTemp, Log, TEXT("配列のサイズ:%d"), SetActorName.Num());
 		
-
 		if (VerticalBox.IsValid())
 		{
-			//UE_LOG(LogTemp, Log, TEXT("クリエイト!!"));
+			// 選択したオブジェクトの情報を表示するウィジェットを作成する
 			VerticalBox -> AddSlot()
 			. AutoHeight()
 			[
@@ -82,49 +85,50 @@ void AEditorClickedEvent::OnObjectSelected(UObject* Object)
 					]
 					+ SHorizontalBox::Slot()
 					[
-					SAssignNew(SelectEditable,CustomIDEditableTextBox)
+					SAssignNew(SelectEditable,SEditableTextBox)
 					.HintText(FText::FromString("TriggerBox Name"))
-					.OnTextChanged_Lambda([this,i](const FText& InText)//各ループのiをキャプチャ
+					// テキストが変更されたときの処理をラムダ式で定義
+					.OnTextChanged_Lambda([this,i](const FText& InText)
 					{
-						if (SelectEditable.IsValid() && CustomEditableTextBox.IsValidIndex(i))
-							CustomEditableTextBox[i]->SetText(InText);
-							
-						if(SetActorName.IsEmpty())
-							return;
-
-							SetActorName[i]=InText;
-						})
+						if(SetActorName.IsEmpty()){return;}
+						
+						SetActorName[i]=InText;
+					})
 					]
 				]
 			];
-			CustomEditableTextBox.Emplace(SelectEditable);
-			EditableTextBoxNum.Emplace(CustomEditableTextBox[i].Get()->GetTextID());
-			//	UE_LOG(LogTemp, Log, TEXT("Editableのサイズ:%d"), CustomEditableTextBox.Num());
-			
 		}
-
 	}
+}
 
+void AEditorClickedEvent::CreateButtonClicked()
+{
+	// ボタンがクリックされたときの処理をラムダ式でバインドする
 	AddButtonClicked.BindLambda([this]
 	{
 		for (int i = 0; i < SelectActorsNum; i++)
 		{
+			// 選択したオブジェクトがnullだったらログを出力する
 			if (!GetSelectObject(i))
 			{
 				UE_LOG(LogTemp, Log, TEXT("ObjectData:Null"));
 			}
 			const UWorld* World = GetSelectObject(i) -> GetWorld();
-			ACreateTriggerBox* AttachTriggerBox = World -> GetWorld() -> SpawnActor<ACreateTriggerBox>(
-				ACreateTriggerBox::StaticClass(), FVector(0, 0, 0), FRotator(0, 0, 0));
+			// TriggerBoxを生成
+			ATriggerBox* AttachTriggerBox = World -> GetWorld() -> SpawnActor<ATriggerBox>(
+				ATriggerBox::StaticClass(), FVector(0, 0, 0), FRotator(0, 0, 0));
+			// 選択したオブジェクトにTriggerBoxをアタッチする
+			AttachTriggerBox -> AttachToComponent(GetSelectObject(i) -> GetRootComponent(),FAttachmentTransformRules::SnapToTargetIncludingScale);
 
-			AttachTriggerBox -> AttachToComponent(GetSelectObject(i) -> GetRootComponent(),
-			                                      FAttachmentTransformRules::SnapToTargetIncludingScale);
-			if(!SetActorName.IsEmpty())
+			// 表示名が決められていなかったら"CreateTriggerBox"という名前を付ける
+			if(!SetActorName[i].IsEmpty())
+			{
 				AttachTriggerBox->SetActorLabel(SetActorName[i].ToString());
+			}
 			else
+			{
 				AttachTriggerBox->SetActorLabel("CreateTriggerBox");
-
-			UE_LOG(LogTemp, Log, TEXT("Attach TriggerBox:%s"), *GetSelectObject(i)->GetActorLabel());
+			}
 		}
 	});
 }

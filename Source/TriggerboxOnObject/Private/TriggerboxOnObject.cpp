@@ -1,16 +1,13 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #include "TriggerboxOnObject.h"
 #include "TriggerboxOnObjectStyle.h"
 #include "TriggerboxOnObjectCommands.h"
-#include "LevelEditor.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Text/STextBlock.h"
 #include "ToolMenus.h"
-#include "Components/BoxComponent.h"
-#include "Engine/TriggerBox.h"
+#include "EditorClickedEvent.h"
 
+//Tabの名前を設定
 static const FName TriggerboxOnObjectTabName("TriggerboxOnObject");
 
 #define LOCTEXT_NAMESPACE "FTriggerboxOnObjectModule"
@@ -59,8 +56,8 @@ TSharedRef<SDockTab> FTriggerboxOnObjectModule::OnSpawnPluginTab(const FSpawnTab
 	return SNew(SDockTab)
 		.TabRole(ETabRole::NomadTab)
 		[
-		SAssignNew(AEditorClickedEvent::VerticalBox,SVerticalBox)	//EditorClickedEventからSlateを追加
-				
+			//EditorClickedEventからSlateを追加
+			SAssignNew(AEditorClickedEvent::VerticalBox,SVerticalBox)	
 		];
 }
 
@@ -69,6 +66,7 @@ void FTriggerboxOnObjectModule::PluginButtonClicked()
 {
 	FGlobalTabmanager::Get()->TryInvokeTab(TriggerboxOnObjectTabName);
 }
+
 
 void FTriggerboxOnObjectModule::RegisterMenus()
 {
@@ -81,24 +79,22 @@ void FTriggerboxOnObjectModule::RegisterMenus()
 	UToolMenu* MenuBar = ToolMenus->ExtendMenu(MainMenuName);
 	
 	FToolMenuOwnerScoped OwnerScoped(this);
-
-	{
-		UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("MainFrame.MainMenu.MyTool");
-		{
-			//メニューバーの中のセクションの名前
-			FToolMenuSection& Section = Menu->AddSection("AddTrigger",LOCTEXT("AddTrigger","AddTrigger"));
-			Section.AddMenuEntryWithCommandList(FTriggerboxOnObjectCommands::Get().OpenPluginWindow, PluginCommands);
-		}
-	}
+	// メニューバーに"MyTool"を追加
+	UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("MainFrame.MainMenu.MyTool");
+	
+	//"MyTool"の中に"AddTrigger"を追加
+	FToolMenuSection& Section = Menu->AddSection("AddTrigger",LOCTEXT("AddTrigger","AddTrigger"));
+	Section.AddMenuEntryWithCommandList(FTriggerboxOnObjectCommands::Get().OpenPluginWindow, PluginCommands);
 	
 	MenuBar->AddSubMenu(
 		"MainMenu",
 		NAME_None,
-		"MyTool",									    	  //ポイントの名称
-		LOCTEXT("MenuBarName", "MyTool"),					  //メニューバーの名前
-		LOCTEXT("MyToolToolTip", "CreateMyPlugin")			  //メニューバーにカーソルを合わせた時のツールチップ
+		"MyTool",
+		//メニューバーの名前
+		LOCTEXT("MenuBarName", "MyTool"),
+		//メニューバーにカーソルを合わせた時のツールチップ
+		LOCTEXT("MyToolToolTip", "CreateMyPlugin")			  
 	);
-
 }
 
 #undef LOCTEXT_NAMESPACE
